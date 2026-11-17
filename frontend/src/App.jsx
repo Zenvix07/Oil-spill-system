@@ -130,7 +130,7 @@ export default function App() {
               <input
                 type="file"
                 accept="image/*"
-                onChange={(e) => { const next = e.target.files?.[0] || null; setFile(next); setSelectedFileName(next?.name || ""); setResult(null); setError(""); }}
+                onChange={(e) => { const next = e.target.files?.[0] || null; setFile(next); setResult(null); setError(""); }}
               />
               + Upload SAR
             </label>
@@ -154,7 +154,7 @@ export default function App() {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => setFile(e.target.files?.[0] || null)}
+                  onChange={(e) => { const next = e.target.files?.[0] || null; setFile(next); setResult(null); setError(""); }}
                 />
                 <div className="drop-icon">⇧</div>
                 <strong>{file ? file.name : "Drop a satellite image here"}</strong>
