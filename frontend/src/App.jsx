@@ -1,14 +1,18 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useState } from "react";
 import {
   MapContainer,
   TileLayer,
   CircleMarker,
   Polyline,
   Popup,
-  Polygon,
 } from "react-leaflet";
 
-const API = "http://localhost:8000";
+const API = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000").replace(/\/$/, "");
+
+function mediaUrl(path) {
+  if (!path) return "";
+  return /^https?:\/\//i.test(path) ? path : `${API}${path.startsWith("/") ? "" : "/"}${path}`;
+}
 
 function Stat({ label, value, sub }) {
   return (
@@ -38,6 +42,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [tab, setTab] = useState("dashboard");
 
+
   const vessels = result?.vessels || [];
   const origin = result?.origin || { lat: 10.5, lon: 72.5 };
   const track = result?.drift_track || [];
@@ -46,38 +51,33 @@ export default function App() {
     if (!file) return;
     setLoading(true);
     setError("");
+    setResult(null);
 
     const form = new FormData();
     form.append("file", file);
 
     try {
-      const response = await fetch(`${API}/api/analyze`, {
-        method: "POST",
-        body: form,
-      });
+      const response = await fetch(`${API}/api/analyze`, { method: "POST", body: form });
+      const contentType = response.headers.get("content-type") || "";
+      const payload = contentType.includes("application/json")
+        ? await response.json()
+        : { detail: await response.text() };
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || "Analysis failed");
-      setResult(data);
+      if (!response.ok) {
+        const detail = payload.detail;
+        throw new Error(typeof detail === "string" ? detail : `Analysis failed (HTTP ${response.status})`);
+      }
+      setResult(payload);
     } catch (e) {
-      setError(e.message);
+      setError(e instanceof TypeError
+        ? `Cannot reach the OILTRACE API at ${API}. Check VITE_API_BASE_URL and confirm the backend is running.`
+        : (e.message || "Analysis failed."));
     } finally {
       setLoading(false);
     }
   }
 
   const mapCenter = [origin.lat, origin.lon];
-
-  const pseudoPolygon = useMemo(() => {
-    if (!result) return [];
-    return [
-      [origin.lat + 0.08, origin.lon - 0.08],
-      [origin.lat + 0.04, origin.lon + 0.14],
-      [origin.lat - 0.04, origin.lon + 0.10],
-      [origin.lat - 0.07, origin.lon - 0.04],
-      [origin.lat, origin.lon - 0.14],
-    ];
-  }, [result, origin.lat, origin.lon]);
 
   return (
     <div className="app-shell">
@@ -130,7 +130,7 @@ export default function App() {
               <input
                 type="file"
                 accept="image/*"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                onChange={(e) => { const next = e.target.files?.[0] || null; setFile(next); setResult(null); setError(""); }}
               />
               + Upload SAR
             </label>
@@ -148,20 +148,17 @@ export default function App() {
               <div className="hero-kicker">SATELLITE → AI → AIS</div>
               <h2>Detect. Reconstruct. Attribute.</h2>
               <p>
-                Upload a Sentinel-1/SAR image and OILTRACE will run the
-                pretrained segmentation model, generate an oil-spill mask,
-                estimate spill geometry, reconstruct a probable origin and
-                rank nearby vessels.
+                Upload a supported satellite image to run segmentation and generate an oil-spill mask. Geospatial area, origin and vessel attribution require calibrated imagery and real external data.
               </p>
               <label className="dropzone">
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => setFile(e.target.files?.[0] || null)}
+                  onChange={(e) => { const next = e.target.files?.[0] || null; setFile(next); setResult(null); setError(""); }}
                 />
                 <div className="drop-icon">⇧</div>
                 <strong>{file ? file.name : "Drop a satellite image here"}</strong>
-                <span>PNG, JPG, TIFF preview • model inference uses 512×512</span>
+                <span>PNG, JPG or WebP • model inference uses 512×512</span>
               </label>
             </div>
             <div className="pipeline">
@@ -179,7 +176,7 @@ export default function App() {
             <section className="stats-grid">
               <Stat label="SPILL STATUS" value={result.oil_detected ? "DETECTED" : "CLEAR"} sub="AI segmentation" />
               <Stat label="OIL CONFIDENCE" value={`${result.oil_confidence}%`} sub="mean oil-class probability" />
-              <Stat label="EST. AREA" value={`${result.estimated_area_km2} km²`} sub="image-space estimate" />
+              <Stat label="EST. AREA" value={result.estimated_area_km2 == null ? "Unavailable" : `${result.estimated_area_km2} km²`} sub="Requires georeferenced imagery" />
               <Stat label="TOP SUSPECT" value={vessels[0]?.score ? `${vessels[0].score}%` : "—"} sub={vessels[0]?.name || "No candidate"} />
             </section>
 
@@ -190,7 +187,7 @@ export default function App() {
                     <span className="card-kicker">GEOSPATIAL VIEW</span>
                     <h3>Spill & Vessel Correlation</h3>
                   </div>
-                  <span className="live-pill">● LIVE ANALYSIS</span>
+                  <span className="live-pill">● ANALYSIS RESULT</span>
                 </div>
 
                 <MapContainer center={mapCenter} zoom={7} className="map">
@@ -198,9 +195,6 @@ export default function App() {
                     attribution='&copy; OpenStreetMap contributors'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
-                  {pseudoPolygon.length > 0 && (
-                    <Polygon positions={pseudoPolygon} pathOptions={{ color: "#ff513b", fillOpacity: 0.32 }} />
-                  )}
                   <CircleMarker center={mapCenter} radius={9} pathOptions={{ color: "#ffb347", fillColor: "#ff513b", fillOpacity: 1 }}>
                     <Popup>Probable spill origin</Popup>
                   </CircleMarker>
@@ -231,11 +225,11 @@ export default function App() {
                   <h3>Segmentation</h3>
                   <div className="image-pair">
                     <div>
-                      <img src={`${API}${result.overlay_url}`} />
+                      <img src={mediaUrl(result.overlay_url)} alt="Satellite image with model overlay" />
                       <span>Overlay</span>
                     </div>
                     <div>
-                      <img src={`${API}${result.mask_url}`} />
+                      <img src={mediaUrl(result.mask_url)} alt="Predicted oil-spill segmentation mask" />
                       <span>Oil mask</span>
                     </div>
                   </div>
@@ -251,7 +245,7 @@ export default function App() {
                 <div className="panel">
                   <div className="card-kicker">ORIGIN ESTIMATE</div>
                   <h3>{origin.lat.toFixed(4)}°, {origin.lon.toFixed(4)}°</h3>
-                  <p className="muted">Backward drift track is shown as a demonstration layer. Connect Copernicus/NOAA currents and wind forcing for scientific hindcasting.</p>
+                  <p className="muted">This coordinate and drift path are demonstration values, not derived from the uploaded image. Real georeferencing and ocean-current data are required for a scientific origin estimate.</p>
                 </div>
               </div>
             </section>
@@ -259,10 +253,10 @@ export default function App() {
             <section className="panel vessel-panel">
               <div className="card-head">
                 <div>
-                  <div className="card-kicker">HISTORICAL AIS CORRELATION</div>
+                  <div className="card-kicker">DEMONSTRATION AIS DATA</div>
                   <h3>Potential source vessels</h3>
                 </div>
-                <span className="muted">Ranked by spatio-temporal evidence</span>
+                <span className="muted">Synthetic candidates — not real vessels</span>
               </div>
               <div className="table-wrap">
                 <table>

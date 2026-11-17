@@ -101,3 +101,24 @@ This endpoint currently generates deterministic demonstration AIS candidates. Re
 The displayed vessel score is an investigation aid, not proof that a vessel caused a spill.
 
 The satellite segmentation model also detects visual patterns that can have look-alikes. Human/analyst review and additional evidence are required for operational attribution.
+
+
+## Configuration for local and deployed environments
+
+The frontend reads the backend base URL from `VITE_API_BASE_URL`.
+Copy `frontend/.env.example` to `frontend/.env.local` and set the URL
+for your API. Vite variables are embedded at build time, so configure this
+value in your frontend hosting provider before building.
+
+The backend reads allowed browser origins from `CORS_ORIGINS`, as a
+comma-separated list. Set it to the exact deployed frontend origin(s), for
+example `https://your-frontend.example`. Keep localhost origins for local
+development only.
+
+## Analysis limitations
+
+- The API returns oil-pixel ratio, not square kilometres. A reliable area
+  estimate requires georeferenced imagery and a known ground sampling distance.
+- The displayed origin, drift path and vessel candidates are demonstration
+  data. They are not derived from the uploaded image or a live AIS feed.
+- Do not use demo vessel scores for operational attribution.

@@ -119,3 +119,49 @@ footer { display: flex; justify-content: space-between; color: #465661; font-siz
   .content-grid { grid-template-columns: 1fr; }
   .side-stack { display: grid; grid-template-columns: 1fr 1fr; }
 }
+
+
+/* Responsive layout and accessible controls */
+html, body, #root { min-height: 100%; }
+body { min-width: 320px; }
+button:focus-visible, input:focus-visible, label:focus-within {
+  outline: 2px solid #ff806e;
+  outline-offset: 3px;
+}
+img { max-width: 100%; }
+@media (max-width: 900px) {
+  .sidebar { width: 210px; }
+  .main { margin-left: 210px; width: calc(100% - 210px); padding: 22px; }
+  .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hero-card { padding: 30px; }
+  .topbar { align-items: flex-start; flex-direction: column; }
+  .top-actions { flex-wrap: wrap; }
+  footer { gap: 10px; flex-wrap: wrap; }
+}
+@media (max-width: 640px) {
+  .app-shell { display: block; }
+  .sidebar {
+    position: static; width: 100%; height: auto; padding: 14px 16px;
+    border-right: 0; border-bottom: 1px solid #17212c;
+  }
+  .brand { margin-bottom: 14px; }
+  .nav-title, .sidebar-bottom { display: none; }
+  .sidebar .nav-btn { display: inline-flex; width: auto; margin: 0 4px 0 0; padding: 9px; font-size: 11px; }
+  .main { margin-left: 0; width: 100%; padding: 18px 14px; }
+  h1 { font-size: 23px; }
+  h2 { font-size: 30px; }
+  .top-actions { width: 100%; }
+  .upload-btn, .analyze-btn { flex: 1; text-align: center; }
+  .hero-card { min-height: 0; padding: 24px 18px; grid-template-columns: 1fr; gap: 24px; }
+  .pipeline { border-left: 0; }
+  .pipeline-item { padding: 12px 4px; }
+  .stats-grid { gap: 8px; }
+  .stat { padding: 12px; min-width: 0; }
+  .stat-value { font-size: 18px; overflow-wrap: anywhere; }
+  .content-grid, .side-stack { display: grid; grid-template-columns: 1fr; }
+  .map { height: 340px; }
+  .map-legend { flex-wrap: wrap; gap: 8px 12px; }
+  .card-head { align-items: flex-start; flex-direction: column; }
+  .image-pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  footer { line-height: 1.5; }
+}
