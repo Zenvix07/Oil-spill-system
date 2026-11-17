@@ -39,7 +39,7 @@ python -m venv .venv
 source .venv/bin/activate
 
 # Windows
-# .venv\Scripts\activate
+# .venv\\Scripts\\activate
 
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
@@ -85,7 +85,7 @@ Response includes:
 
 - oil confidence
 - oil pixel ratio
-- estimated area
+- estimated area (unavailable unless georeferencing is provided)
 - mask image URL
 - overlay image URL
 - class distribution
@@ -102,23 +102,14 @@ The displayed vessel score is an investigation aid, not proof that a vessel caus
 
 The satellite segmentation model also detects visual patterns that can have look-alikes. Human/analyst review and additional evidence are required for operational attribution.
 
-
 ## Configuration for local and deployed environments
 
-The frontend reads the backend base URL from `VITE_API_BASE_URL`.
-Copy `frontend/.env.example` to `frontend/.env.local` and set the URL
-for your API. Vite variables are embedded at build time, so configure this
-value in your frontend hosting provider before building.
+The frontend reads the backend base URL from `VITE_API_BASE_URL`. Set this variable in your local frontend environment (for example, `.env.local`) or in your frontend hosting provider before building. If it is not set, the app uses `http://localhost:8000`.
 
-The backend reads allowed browser origins from `CORS_ORIGINS`, as a
-comma-separated list. Set it to the exact deployed frontend origin(s), for
-example `https://your-frontend.example`. Keep localhost origins for local
-development only.
+The backend reads allowed browser origins from `CORS_ORIGINS`, as a comma-separated list. Set it in your backend environment or hosting dashboard to the exact deployed frontend origin(s), for example `https://your-frontend.example`. The local development origins are used by default.
 
 ## Analysis limitations
 
-- The API returns oil-pixel ratio, not square kilometres. A reliable area
-  estimate requires georeferenced imagery and a known ground sampling distance.
-- The displayed origin, drift path and vessel candidates are demonstration
-  data. They are not derived from the uploaded image or a live AIS feed.
+- The API returns oil-pixel ratio, not square kilometres. A reliable area estimate requires georeferenced imagery and a known ground sampling distance.
+- The displayed origin, drift path and vessel candidates are demonstration data. They are not derived from the uploaded image or a live AIS feed.
 - Do not use demo vessel scores for operational attribution.
