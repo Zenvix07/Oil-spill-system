@@ -90,7 +90,7 @@ async def analyze(file: UploadFile = File(...)):
             source.verify()
         with Image.open(io.BytesIO(raw)) as source:
             image = source.convert("RGB")
-    except (UnidentifiedImageError, OSError, ValueError):
+    except (UnidentifiedImageError, Image.DecompressionBombError, OSError, ValueError):
         raise HTTPException(status_code=400, detail="The uploaded file is not a valid, supported image.")
 
     job_id = uuid.uuid4().hex[:10]
